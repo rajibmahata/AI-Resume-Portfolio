@@ -1,0 +1,39 @@
+﻿@page "/upload-resume"
+@using Microsoft.AspNetCore.Components.Forms
+@using AIResumePortfolio.Models
+@using AIResumePortfolio.Services
+@inject IFileService FileService
+
+<h3>Upload Resume</h3>
+
+<InputFile OnChange="HandleFileSelected" />
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+@if (!string.IsNullOrEmpty(SuccessMessage))
+{
+    <div class="alert alert-success">@SuccessMessage</div>
+}
+
+@code {
+    private string ErrorMessage { get; set; }
+    private string SuccessMessage { get; set; }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var resume = await FileService.UploadFileAsync(e);
+            SuccessMessage = "Resume uploaded successfully.";
+            ErrorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            SuccessMessage = string.Empty;
+        }
+    }
+}
