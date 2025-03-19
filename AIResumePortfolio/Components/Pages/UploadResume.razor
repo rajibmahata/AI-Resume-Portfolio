@@ -2,11 +2,17 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using AIResumePortfolio.Models
 @using AIResumePortfolio.Services
+@using System.Net.NetworkInformation
+@using System.Net
 @inject IFileService FileService
+@rendermode InteractiveServer
 
-<h3>Upload Resume</h3>
+<PageTitle>Upload Resume</PageTitle>
 
-<InputFile OnChange="HandleFileSelected" />
+
+
+<InputFile OnChange="OnFileSelected" />
+<button class="btn btn-primary" @onclick="SubmitFile">Submit</button>
 
 @if (!string.IsNullOrEmpty(ErrorMessage))
 {
@@ -19,14 +25,26 @@
 }
 
 @code {
+    private IBrowserFile selectedFile;
     private string ErrorMessage { get; set; }
     private string SuccessMessage { get; set; }
 
-    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    private void OnFileSelected(InputFileChangeEventArgs e)
     {
+        selectedFile = e.File;
+    }
+
+    private async Task SubmitFile()
+    {
+        if (selectedFile == null)
+        {
+            ErrorMessage = "Please select a file before submitting.";
+            return;
+        }
+
         try
         {
-            var resume = await FileService.UploadFileAsync(e);
+            await HandleFileSelected(selectedFile);
             SuccessMessage = "Resume uploaded successfully.";
             ErrorMessage = string.Empty;
         }
@@ -35,5 +53,57 @@
             ErrorMessage = ex.Message;
             SuccessMessage = string.Empty;
         }
+    }
+
+    private async Task HandleFileSelected(IBrowserFile file)
+    {
+        var validFormats = new[] { ".pdf", ".doc", ".docx" };
+
+        if (!validFormats.Contains(Path.GetExtension(file.Name).ToLower()))
+        {
+            throw new InvalidOperationException("Invalid file format. Please upload a PDF or DOC file.");
+        }
+
+        if (file.Size > 5 * 1024 * 1024) // 5 MB limit
+        {
+            throw new InvalidOperationException("File size exceeds the 5 MB limit.");
+        }
+
+        using var memoryStream = new MemoryStream();
+        await file.OpenReadStream().CopyToAsync(memoryStream);
+        var mac = GetMacAddress();
+        var ipAddress = GetIpAddress();
+
+        var resume = new Resume
+            {
+                Id = Guid.NewGuid(),
+                FileName = file.Name,
+                FileContent = memoryStream.ToArray(),
+                CreatedAt = DateTime.Now,
+                ParsedJson = "{}",
+                PortfolioHtml = "<p>Generated Portfolio</p>",
+                MAC = mac,
+                IPAddress = ipAddress
+            };
+
+        await FileService.InsertAsync(resume);
+    }
+
+    private string GetMacAddress()
+    {
+        var macAddr =
+            (
+                from nic in NetworkInterface.GetAllNetworkInterfaces()
+                where nic.OperationalStatus == OperationalStatus.Up
+                select nic.GetPhysicalAddress().ToString()
+            ).FirstOrDefault();
+        return macAddr;
+    }
+
+    private string GetIpAddress()
+    {
+        var host = Dns.GetHostEntry(Dns.GetHostName());
+        var ip = host.AddressList.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+        return ip?.ToString();
     }
 }

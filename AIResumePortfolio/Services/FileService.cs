@@ -2,18 +2,60 @@
 using Microsoft.AspNetCore.Components.Forms;
 using System.Net.NetworkInformation;
 using System.Net;
+using Microsoft.EntityFrameworkCore;
+using DocumentFormat.OpenXml.Packaging;
+using System.Text;
+using Newtonsoft.Json;
+using AIResumePortfolio.AIAgents;
 
 namespace AIResumePortfolio.Services
 {
     public class FileService : IFileService
     {
         private readonly IGenericRepository<Resume> _resumeRepository;
-
-        public FileService(IGenericRepository<Resume> resumeRepository)
+        private readonly HuggingfaceAIService _huggingfaceAIService;
+        public FileService(IGenericRepository<Resume> resumeRepository, HuggingfaceAIService huggingfaceAIService)
         {
             _resumeRepository = resumeRepository;
+            _huggingfaceAIService = huggingfaceAIService;
         }
+        public async Task<Resume> InsertAsync(Resume resume)
+        {
+            if (resume == null)
+            {
+                throw new ArgumentNullException(nameof(resume));
+            }
 
+            //string prompt = "Extract JSON with name, summary, skills, experience, education, contact...";
+            //var response = await _openAi.CreateCompletion(new CompletionCreateRequest
+            //{
+            //    Prompt = prompt + resume.Text,
+            //    Model = "text-davinci-003",
+            //    MaxTokens = 1000
+            //});
+
+            string resumeText = ExtractTextFromDocx(resume.FileContent);
+
+            // 2. AI Parsing
+            var standardResume = await _huggingfaceAIService.GenerateStructuredResume(resumeText);
+
+            // 3. HTML Generation
+            var portfolioHtml = await _huggingfaceAIService.GenerateResumeHtml(standardResume);
+
+            // 4. Save to database
+            var newresume = new Resume
+            {
+                FileName = resume.FileName,
+                ParsedJson = JsonConvert.SerializeObject(standardResume),
+                PortfolioHtml = portfolioHtml,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            resume.ParsedTextContent = resumeText;
+            await _resumeRepository.InsertAsync(resume);
+
+            return resume;
+        }
         public async Task<Resume> UploadFileAsync(InputFileChangeEventArgs e)
         {
             var file = e.File;
@@ -79,6 +121,48 @@ namespace AIResumePortfolio.Services
             return ip?.ToString();
         }
 
+        public string ExtractTextFromDocx(byte[] fileContent)
+        {
+            try
+            {
+                StringBuilder extractedText = new StringBuilder();
+
+                using (var memoryStream = ByteArrayToStream(fileContent))
+                {
+                    using (WordprocessingDocument doc = WordprocessingDocument.Open(memoryStream, false))
+                    {
+                        var body = doc.MainDocumentPart?.Document?.Body;
+                        if (body != null)
+                        {
+                            foreach (var element in body.Elements())
+                            {
+                                extractedText.AppendLine(element.InnerText);
+                            }
+                        }
+                    }
+                }
+
+                // Add space after each sentence
+                string textWithSpaces = System.Text.RegularExpressions.Regex.Replace(
+                    extractedText.ToString(),
+                    @"(?<=[.!?])\s*(?=[A-Z])",
+                    " "
+                );
+
+                return textWithSpaces;
+            }
+            catch (Exception ex)
+            {
+                return $"Error extracting DOCX text: {ex.Message}";
+            }
+        }
+
+
+        public Stream ByteArrayToStream(byte[] byteArray)
+        {
+            return new MemoryStream(byteArray);
+        }
+
         //public string ExtractText(IFormFile file)
         //{
         //    if (file.ContentType == "application/pdf")
@@ -90,5 +174,7 @@ namespace AIResumePortfolio.Services
 
         //    throw new InvalidDataException("Unsupported file format");
         //}
+
+
     }
 }

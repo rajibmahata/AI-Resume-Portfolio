@@ -1,0 +1,90 @@
+﻿@page "/resumes-list"
+@using AIResumePortfolio.Models
+@using AIResumePortfolio.Services
+@using System.Net
+@using System.Net.NetworkInformation
+@inject IResumeService ResumeService
+@rendermode InteractiveServer
+
+<PageTitle>Resumes List</PageTitle>
+
+<h3>Resumes List</h3>
+
+@if (Resumes == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!Resumes.Any())
+{
+    <p>No resumes found for this IP address.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var resume in Resumes)
+            {
+                <tr>
+                    <td>@resume.FileName</td>
+                    <td>@resume.CreatedAt</td>
+                    <td>
+                        <button class="btn btn-danger" @onclick="() => DeleteResume(resume.Id)">Delete</button>
+                        <button class="btn btn-primary" @onclick="() => ViewResume(resume.Id)">View</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Resume> Resumes { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadResumes();
+    }
+
+    private async Task LoadResumes()
+    {
+        var ipAddress = GetIpAddress();
+        var macAddress = GetMacAddress();
+        Resumes = await ResumeService.GetResumesByIpandMacAddressAsync(ipAddress,macAddress);
+    }
+
+    private async Task DeleteResume(Guid resumeId)
+    {
+        await ResumeService.DeleteResumeAsync(resumeId);
+        await LoadResumes();
+    }
+
+    private void ViewResume(Guid resumeId)
+    {
+        // Implement view functionality, e.g., navigate to a detailed view page or open a modal
+       // NavigationManager.NavigateTo($"/resume-details/{resumeId}");
+    }
+
+    private string GetIpAddress()
+    {
+        var host = Dns.GetHostEntry(Dns.GetHostName());
+        var ip = host.AddressList.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+        return ip?.ToString();
+    }
+    private string GetMacAddress()
+    {
+        var macAddr =
+            (
+                from nic in NetworkInterface.GetAllNetworkInterfaces()
+                where nic.OperationalStatus == OperationalStatus.Up
+                select nic.GetPhysicalAddress().ToString()
+            ).FirstOrDefault();
+        return macAddr;
+    }
+}

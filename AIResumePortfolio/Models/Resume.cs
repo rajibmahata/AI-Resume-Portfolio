@@ -6,6 +6,8 @@ namespace AIResumePortfolio.Models
     {
         [Key]
         public Guid Id { get; set; }
+        [Required]
+        [StringLength(255)]
         public string FileName { get; set; }
         public byte[] FileContent { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -14,5 +16,7 @@ namespace AIResumePortfolio.Models
 
         public string MAC { get; set; }
         public string IPAddress { get; set; }
+
+        public string ParsedTextContent { get; set; }
     }
 }

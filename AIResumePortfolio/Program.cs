@@ -1,3 +1,4 @@
+using AIResumePortfolio.AIAgents;
 using AIResumePortfolio.Components;
 using AIResumePortfolio.Data;
 using AIResumePortfolio.Services;
@@ -17,9 +18,15 @@ builder.Services.AddRazorComponents()
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHttpClient();
 // Register the generic repository
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<IResumeService, ResumeService>();
+
+//builder.Services.AddScoped<ResumeParserAgent>();
+//builder.Services.AddScoped<PortfolioDesignAgent>();
+builder.Services.AddScoped<HuggingfaceAIService>();
 
 var app = builder.Build();
 

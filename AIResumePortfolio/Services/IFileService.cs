@@ -7,5 +7,6 @@ namespace AIResumePortfolio.Services
     {
         Task<Resume> UploadFileAsync(InputFileChangeEventArgs e);
         Task<byte[]> ReadFileAsync(string fileName);
+        Task<Resume> InsertAsync(Resume resume);
     }
 }
