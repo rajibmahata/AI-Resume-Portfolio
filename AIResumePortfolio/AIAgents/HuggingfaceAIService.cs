@@ -9,7 +9,7 @@ namespace AIResumePortfolio.AIAgents
     {
         private readonly HttpClient _httpClient;
         private const string HuggingFaceApiUrl = "https://api-inference.huggingface.co/models/";
-        private const string ApiKey = "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"; // Free API Key
+        private const string ApiKey = ""; // Free API Key
 
         public HuggingfaceAIService(HttpClient httpClient)
         {
