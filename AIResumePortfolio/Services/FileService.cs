@@ -13,11 +13,13 @@ namespace AIResumePortfolio.Services
     public class FileService : IFileService
     {
         private readonly IGenericRepository<Resume> _resumeRepository;
-        private readonly HuggingfaceAIService _huggingfaceAIService;
-        public FileService(IGenericRepository<Resume> resumeRepository, HuggingfaceAIService huggingfaceAIService)
+        private readonly HuggingFaceService _huggingfaceAIService;
+        private readonly OllamaAIService _OllamaAIService;
+        public FileService(IGenericRepository<Resume> resumeRepository, HuggingFaceService huggingfaceAIService, OllamaAIService ollamaAIService)
         {
             _resumeRepository = resumeRepository;
             _huggingfaceAIService = huggingfaceAIService;
+            _OllamaAIService = ollamaAIService;
         }
         public async Task<Resume> InsertAsync(Resume resume)
         {
@@ -36,18 +38,23 @@ namespace AIResumePortfolio.Services
 
             string resumeText = ExtractTextFromDocx(resume.FileContent);
 
+            // 1. AI Parsing
+            var standardResume = await _OllamaAIService.ProcessResumeTextAsync(resumeText);
+
             // 2. AI Parsing
-            var standardResume = await _huggingfaceAIService.GenerateStructuredResume(resumeText);
+            //var ExtractResumeText = await _huggingfaceAIService.ExtractResumeText(resumeText);
+            //// 2. AI Parsing
+            //var standardResume = await _huggingfaceAIService.GenerateStructuredResume(ExtractResumeText);
 
             // 3. HTML Generation
-            var portfolioHtml = await _huggingfaceAIService.GenerateResumeHtml(standardResume);
+            // var portfolioHtml = await _huggingfaceAIService.GenerateResumeHtml(standardResume);
 
             // 4. Save to database
             var newresume = new Resume
             {
                 FileName = resume.FileName,
-                ParsedJson = JsonConvert.SerializeObject(standardResume),
-                PortfolioHtml = portfolioHtml,
+            //    ParsedJson = JsonConvert.SerializeObject(standardResume),
+           //     PortfolioHtml = portfolioHtml,
                 CreatedAt = DateTime.UtcNow
             };
 

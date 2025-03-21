@@ -26,7 +26,8 @@ builder.Services.AddScoped<IResumeService, ResumeService>();
 
 //builder.Services.AddScoped<ResumeParserAgent>();
 //builder.Services.AddScoped<PortfolioDesignAgent>();
-builder.Services.AddScoped<HuggingfaceAIService>();
+builder.Services.AddScoped<HuggingFaceService>();
+builder.Services.AddScoped<OllamaAIService>();
 
 var app = builder.Build();
 
