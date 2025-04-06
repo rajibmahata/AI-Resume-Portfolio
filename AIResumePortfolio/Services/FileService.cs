@@ -38,6 +38,15 @@ namespace AIResumePortfolio.Services
 
             string resumeText = ExtractTextFromDocx(resume.FileContent);
 
+            var sections = ResumeExtractor.ExtractSections(resumeText);
+
+            Console.WriteLine("Personal Info:\n" + sections.PersonalInfo);
+            Console.WriteLine("\nSummary:\n" + sections.Summary);
+            Console.WriteLine("\nExperience:\n" + sections.Experience);
+            Console.WriteLine("\nEducation:\n" + sections.Education);
+            Console.WriteLine("\nSkills:\n" + sections.Skills);
+            Console.WriteLine("\nProjects:\n" + sections.Projects);
+            Console.WriteLine("\nRecommendations:\n" + sections.Recommendations);
             // 1. AI Parsing
             var standardResume = await _OllamaAIService.ProcessResumeTextAsync(resumeText);
 
